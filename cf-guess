@@ -1,0 +1,40 @@
+#!/bin/bash
+# cf-guess
+#
+# Opinionated wrapper for `aws cloudformation`. Generates CLI arguments from
+# 'parameters' files and directory names.
+# 
+# Usage:
+#
+#   cf-guess <env> <action> [extra arguments]
+#
+# Example:
+#
+#   cf-guess beta create-stack
+#   cf-guess beta create-create-changeset --change-set-name delete-me
+
+set -eu
+
+jq_parameters () {
+  jq -j \
+    '.Parameters|to_entries|map({"ParameterKey": .key, "ParameterValue": .value}) | @text' "$@"
+}
+
+jq_tags () {
+  jq -j '.Tags|to_entries|map({"Key": .key, "Value": .value}) | @text' "$@"
+}
+
+ENV=$1
+shift 1
+
+APP_NAME="$(git rev-parse --show-toplevel | xargs basename)"
+STACK_DIR="$(pwd | xargs basename)"
+STACK="${APP_NAME}-${STACK_DIR}-${ENV}"
+CAPABILITIES="CAPABILITY_NAMED_IAM"
+
+aws cloudformation $@ \
+  --stack-name "$STACK" \
+  --capabilities "$CAPABILITIES" \
+  --template-body file://template.yml \
+  --parameters $(jq_parameters "$ENV.json") \
+  --tags $(jq_tags "$ENV.json") 
