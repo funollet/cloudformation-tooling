@@ -50,3 +50,6 @@ aws cloudformation $@ \
   --template-body file://template.yml \
   --parameters $(jq_parameters "$ENV.json") \
   --tags $(jq_tags "$ENV.json")
+
+echo "Waiting for stack update to complete..."
+aws cloudformation wait stack-update-complete --stack-name "$STACK"
