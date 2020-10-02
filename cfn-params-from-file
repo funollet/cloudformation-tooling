@@ -1,0 +1,47 @@
+#!/bin/bash
+# cfn-params-from-file
+
+set -eu
+
+jq_parameters () {
+  jq -j \
+    '.Parameters|to_entries|map({"ParameterKey": .key, "ParameterValue": .value}) | @text' "$@"
+}
+
+jq_tags () {
+  jq -j '.Tags|to_entries|map({"Key": .key, "Value": .value}) | @text' "$@"
+}
+
+
+usage () {
+    cat <<.
+Usage: cfn-params-from-file <file.json>
+
+Parses a JSON files and generates '--parameters [...] --tags [...]' 
+for CLI 'aws cloudformation' subcommands.
+
+This is a crude helper to deploy from CLI a CloudFormation stack. If you
+are using Codepipeline to deploy this stack, you already created a JSON
+file destined to the 'TemplateConfiguration' parameter in a Codepipeline
+action 'Deploy Cloudformation'. This file will be parsed and parameters
+for the CLI will be generated.
+
+Examples:
+
+    aws cloudformation create-stack \\
+        --stack-name delete-me \\
+        --template-body file://pipeline/template.yml \\
+        \$(cfn-params-from-file pipeline/beta.json)
+.
+}
+
+
+if [[ $# -lt 1 ]] ; then
+    usage ; exit 1
+fi
+FNAME="$1"
+
+echo -n ' --parameters '
+jq_parameters "$FNAME"
+echo -n ' --tags '
+jq_tags "$FNAME"
