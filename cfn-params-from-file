@@ -17,7 +17,7 @@ usage () {
     cat <<.
 Usage: cfn-params-from-file <file.json>
 
-Parses a JSON files and generates '--parameters [...] --tags [...]' 
+Parses a JSON files and generates '--parameters [...] --tags [...] --policy-body [...]' 
 for CLI 'aws cloudformation' subcommands.
 
 This is a crude helper to deploy from CLI a CloudFormation stack. If you
@@ -43,5 +43,14 @@ FNAME="$1"
 
 echo -n ' --parameters '
 jq_parameters "$FNAME"
-echo -n ' --tags '
-jq_tags "$FNAME"
+
+if jq -e .Tags "$FNAME" > /dev/null ; then
+    echo -n ' --tags '
+    jq_tags "$FNAME"
+fi
+
+if jq -e .StackPolicy "$FNAME" > /dev/null ; then
+    fpolicy=$(mktemp --tmpdir=/tmp policyXXX.json)
+    jq -r '.StackPolicy' "$FNAME" > $fpolicy
+    echo -n " --policy-body file:/${fpolicy}"
+fi
